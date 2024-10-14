@@ -57,7 +57,7 @@ education_gender_table <- sex_edu |>
   pivot_wider(names_from = education, values_from = count)
 
 ## make a table
-kable(education_gender_table, title = "Number of Male and Female in Each Education Category")
+kable(education_gender_table, caption = "Number of Male and Female in Each Education Category")
 ```
 * Education level for male: 27 less than 9th grade, 35 9-11th grade, 56 high school graduate/GED
 * Education level for female: 28 less than 9th grade, 23 9-11th grade, 59 high school graduate/GED
@@ -128,7 +128,7 @@ education_labels <- c("1" = "Less than 9th grade",
                       "3" = "High school graduate/GED")
 
 ggplot(activity_summary, aes(x = time, y = mean_MIMS, color = sex, group = sex)) +
-  geom_line(size = 1, alpha = 0.25) +
+  geom_line(alpha = 0.25) +
   geom_smooth(se = FALSE, method = "loess") +
   facet_wrap(~ education, labeller = labeller(education = education_labels)) +
   labs(
