@@ -138,7 +138,7 @@ ggplot(activity_summary, aes(x = time, y = mean_MIMS, color = sex, group = sex))
     color = "Gender") +
   theme_minimal()
 ```
-* Overall, across the three education levels, both males and females exhibit a similar trend: average activity is relatively low in the morning and evening, peaks mid-day, and then declines in the afternoon. In each plot, females consistently show higher average activity than males. Specifically, in the "High school graduate/GED" group, the peak activity period is broader than in the other two groups, suggesting that individuals with this education level sustain higher activity for a longer duration.
+* Overall, across the three education levels, both males and females exhibit a similar trend: average activity is relatively low in the morning and evening, peaks mid-day, and then declines in the afternoon. In each plot, females consistently show higher average activity than males. Specifically, in the "High school graduate/GED" group, the peak activity period is broader than in the other two groups, suggesting that individuals with this education level sustain higher activity for a longer duration
 
 
 
