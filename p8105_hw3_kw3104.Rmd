@@ -2,11 +2,13 @@
 title: "p8105_hw3_kw3104"
 output: github_document
 ---
+
 ```{r}
 library(tidyverse)
 library(dplyr)
 library(knitr)
 library(ggplot2)
+library(flextable) 
 ```
 
 ## Problem 2
@@ -25,7 +27,7 @@ demo =
 ## `accel` has 250 observations and 1441 variables.
 accel = 
   read_csv("data/nhanes_accel.csv") |>
-  janitor::clean_names ()
+  rename(seqn = SEQN) 
 
 ## Use anti_join to check for completeness and correctness across datasets. `anti` shows 0 observation and 5 variables, means the all rows are matched.
 anti = anti_join(demo, accel, by = "seqn")
@@ -141,4 +143,77 @@ ggplot(activity_summary, aes(x = time, y = mean_MIMS, color = sex, group = sex))
 * Overall, across the three education levels, both males and females exhibit a similar trend: average activity is relatively low in the morning and evening, peaks mid-day, and then declines in the afternoon. In each plot, females consistently show higher average activity than males. Specifically, in the "High school graduate/GED" group, the peak activity period is broader than in the other two groups, suggesting that individuals with this education level sustain higher activity for a longer duration
 
 ## Problem 3
+
+load, clean and tidy csv files:
+```{r}
+Jan20 = 
+  read_csv("data/Jan 2020 Citi.csv") |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "January")
+
+Jan24 = 
+  read_csv("./data/Jan 2024 Citi.csv") |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "January")
+
+Jul20 = 
+  read_csv("data/July 2020 Citi.csv") |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "July")
+ 
+Jul24 = 
+  read_csv("data/July 2024 Citi.csv") |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "July")
+ 
+combined<- bind_rows(Jan20, Jan24, Jul20, Jul24)  
+```
+* 4 csv files have same 7 variables (ride_id, rideable_type, weekdays, duration, start_station_name, end_station_name and member_causal), I added two columns for year and month at the end of each csv file, so they have 9 variables. 
+* Before combine, `Jan20` has 12420 observations, `Jan24` has 18861 observations, `Jul20` has 21048 observations, and `Jul24` has 47156 observations. After combined, `combined` has 99485 observations. 
+
+Produce a reader-friendly table showing the total number of rides in each combination of year and month separating casual riders and Citi Bike members.
+
+
+```{r}
+# Process the data to create ride_summary
+ride_summary <- combined %>%
+  group_by(year, month, member_casual) %>%
+  summarize(total_rides = n(), .groups = 'drop') %>%
+  rename(
+    "Year" = year,
+    "Month" = month,
+    "User Type" = member_casual,
+    "Total Rides" = total_rides
+  ) %>%
+  arrange(Year, Month)
+
+# Create the flextable and format only Total Rides with commas
+ride_summary_ft <- flextable(ride_summary) %>%
+  merge_v(j = c("Year", "Month")) %>%  # Merge cells vertically in Year and Month columns
+  colformat_int(j = "Total Rides", big.mark = ",") %>%  # Format only Total Rides with commas
+  set_header_labels(
+    Year = "Year",
+    Month = "Month",
+    `User Type` = "User Type",
+    `Total Rides` = "Total Rides"
+  ) %>%
+  theme_vanilla()  # Apply a clean theme
+
+# Display the flextable
+ride_summary_ft
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
