@@ -1,15 +1,102 @@
 ---
 title: "p8105_hw3_kw3104"
+author: Carrie Wu
+date: Oct 16, 2024
 output: github_document
 ---
 
-```{r}
+```{r setup, include=FALSE}
 library(tidyverse)
+library(ggridges)
+library(patchwork)
+
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+
 library(dplyr)
 library(knitr)
 library(ggplot2)
 library(flextable) 
+library(forcats)
 ```
+### Problem 1
+
+#### Read in the data
+
+```{r}
+data("ny_noaa")
+```
+
+#### Answer questions about the data
+
+This dataset contains `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns. Variables include weather station id, date of observation,  (tenths of mm), snowfall (mm), snow depth (mm), and min and max temperature (tenths of degrees C).
+
+Below we clean the data, creating separate variables for year, month, and day and converting `tmax` and `tmin` to numeric. We find that 0 is the most commonly observed value for snowfall. This is because most days of the year, it does not snow at all in NY. The second most commonly observed value is `NA`, indicating missingness. Other common values are 13, 25, and 51, suggesting that snowfall is originally recorded in fractions of an inch and converted to mm.
+
+```{r}
+ny_noaa %>% 
+  count(snow) %>%
+  arrange(desc(n))
+
+ny_noaa = 
+  ny_noaa %>% 
+  separate(date, into = c("year", "month", "day"), convert = TRUE) %>% 
+  mutate(
+    tmax = as.numeric(tmax),
+    tmin = as.numeric(tmin))
+```
+
+Below is a two-panel plot showing the average max temperature in January and in July in each station across years. As expected, the mean temperature in January is much lower than the mean temperature in July for all stations and across all years. All stations appear to follow similar trends of temperature peaks and valleys within a month across the years, i.e. when one station has a high monthly mean temperature for a given year, most other stations also have a high monthly mean temperature for that year. We do see one uncharacteristically cold station in July of 1987 or 1988, as well as a few other less drastic outliers.
+
+```{r}
+ny_noaa %>% 
+  group_by(id, year, month) %>% 
+  filter(month %in% c(1, 7)) %>% 
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE, color = id)) %>% 
+  ggplot(aes(x = year, y = mean_tmax, group = id)) + geom_point() + geom_path() +
+  facet_grid(~month) +
+  labs(title = "Mean monthly temperature for each station across years for January and July")
+```
+
+Below we show a two-panel plot including (i) a hex plot of `tmax` vs `tmin` for the full dataset; and (ii) a ridge plot showing the distribution of snowfall values (in mm) greater than 0 and less than 100 separately by year. 
+
+From the hex plot we see that while there is some variability, the majority of the data cluster tightly in the center of the distribution. In relatively rare cases, it seems that `tmax` is less than `tmin`, which raises questions about data recording and quality.
+
+From the ridge plot, we see a multimodal density of snowfall within a given year. Most stations see between 0 and  35 mm of snow in a year. Then there is a another group of stations that see about 45 mm of snow, and another group that sees nearly 80 mm. It is likely this multimodality stems from the conversion of measurements in one system (fractions of an inch) to another (using the metric system), which was also noted in the table of common values. 
+
+```{r}
+hex = 
+  ny_noaa %>% 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_hex()
+
+ridge = 
+  ny_noaa %>% 
+  filter(snow < 100, snow > 0) %>%
+  ggplot(aes(x = snow, y = as.factor(year))) + 
+  geom_density_ridges()
+
+hex + ridge
+```
+
 
 ## Problem 2
 
@@ -199,11 +286,13 @@ ride_summary_ft <- flextable(ride_summary) |>
 # Display the flextable
 ride_summary_ft
 ```
- * There are 8 observations (2020 January casual, 2020 January member, 2020 July causual, 2020 July member, 2024 January casual, 2024 January member, 2024 July causual, 2024 July member) and 4 variables (year, month, user type, total rides) in the `ride_summary`. For more easy to read, I merged same values cells using `flextable`. 
+
+* There are 8 observations (2020 January casual, 2020 January member, 2020 July causual, 2020 July member, 2024 January casual, 2024 January member, 2024 July causual, 2024 July member) and 4 variables (year, month, user type, total rides) in the `ride_summary`. For more easy to read, I merged same values cells using `flextable`. 
+
 * July 2024 CITI bike member has the most total rides (36262), January 2020 casual member has the least total rides (984).
 
 
-Make a table showing the 5 most popular starting stations for July 2024
+Make a table showing the 5 most popular starting stations for July 2024; include the number of rides originating from these stations.
 ```{r}
 top_station_Jul24 <- Jul24 |>
   group_by(start_station_name) |>
@@ -218,9 +307,69 @@ top_station_Jul24 |>
 ```
 * In July 2024, the most popular station is `Pier 61 at Chelsea Piers` with	163 total rides; the second popular station is `University Pl & E 14 St` with	155 total rides; the third popular station is `W 21 St & 6 Ave` with	152 total rides; the fourth popular station is `West St & Chambers St` with 150 total rides; the fifth popular station is `W 31 St & 7 Ave` with 146 total rides.
 
+Make a plot to investigate the effects of day of the week, month, and year on median ride duration. This plot can include one or more panels, but should facilitate comparison across all variables of interest.
+
+```{r}
+# Calculate median ride duration by weekday, month, and year
+median_duration <- combined |>
+  group_by(year, month, weekdays) |>
+  summarize(median_duration = median(duration, na.rm = TRUE), .groups = 'drop') |>
+  mutate(
+    weekdays = fct_relevel(weekdays, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    dataset = paste(year, month)  # Create 'dataset' combining year and month
+  )
+
+# Define colors for each dataset (year and month combination)
+colors <- c("2020 January" = "blue", "2024 January" = "red", "2020 July" = "green", "2024 July" = "purple")
+
+# Plot using ggplot
+ggplot(median_duration, aes(x = weekdays, y = median_duration, group = dataset, color = dataset)) +
+  geom_line(linewidth = 1) +
+  geom_point(linewidth = 3) +
+  labs(
+    title = "Median Ride Duration by Day of the Week, Month, and Year",
+    x = "Day of the Week",
+    y = "Median Ride Duration (minutes)",
+    color = "Dataset") +
+  scale_color_manual(values = colors) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right")
+```
+* `median_duration` has 28 observations and 5 variables (year, month, weekdays, median_duration and dataset.
+* Comparing to other time points, July 2020 has significant higher median ride duration that all higher than 12.5. Othe time points are relatively close, with median ride duration between 7.3 and 10.8. 
+* The highest median ride duration is July 2020 Sunday 16.507567; the lowest median ride duration is Janurary 2024 7.382083.
 
 
+There were relatively few electric Citi Bikes in 2020, but many more are available now. For data in 2024, make a figure that shows the impact of month, membership status, and bike type on the distribution of ride duration. 
 
+```{r}
+# Filter data for the year 2024
+data_2024 <- combined |>
+  filter(year == 2024) |>
+  select(month, member_casual, rideable_type, duration) 
+
+# Create the plot with ggplot2
+ggplot(data_2024, aes(x = member_casual, y = duration, fill = rideable_type)) +
+  geom_boxplot(outlier.shape = NA) +  # Use boxplot to show distribution, remove outliers from the plot
+  facet_wrap(~ month) +  # Create separate panels for each month
+  labs(
+    title = "Distribution of Ride Duration by Membership Status, Bike Type, and Month in 2024",
+    x = "Membership Status",
+    y = "Ride Duration (minutes)",
+    fill = "Bike Type"
+  ) +
+  scale_y_continuous(limits = c(0, quantile(data_2024$duration, 0.95, na.rm = TRUE))) +  # Limit y-axis to the 95th percentile
+  scale_fill_brewer(palette = "Paired") +  # Apply color palette for bike types
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right")
+```
+* `data_2024` has 66017 observation and 4 variables (month, member_casual, rideable_type, duration). 
+* For both January and July, casual riders tend to have longer ride durations than members across both bike types.
+* July has slightly longer duration compares to January, suggest that people more likely perform outdoor recreation in warm weather. 
 
 
 
